@@ -60,14 +60,10 @@ The `.env` file is gitignored. You will never commit it. For Make.com, you will 
    - Voice: choose a natural-sounding voice (11labs recommended)
    - Max call duration: 300 seconds
    - Save and copy the Assistant ID → add to `.env` as `VAPI_DOCTOR_ASSISTANT_ID`
-3. **Create the Pharmacy Call Agent:**
-   - Repeat with content from `vapi/pharmacy_agent.json`
-   - Max call duration: 240 seconds
-   - Save and copy the Assistant ID → add to `.env` as `VAPI_PHARMACY_ASSISTANT_ID`
-4. **Get a Vapi phone number:**
+3. **Get a Vapi phone number:**
    - Go to Phone Numbers → Buy Number
    - Copy the Phone Number ID → you'll need it in Make.com
-5. **Configure webhook:**
+4. **Configure webhook:**
    - Go to Settings → Server URL
    - Leave blank for now — fill in after creating Make.com Scenario 3
 
@@ -84,6 +80,7 @@ The `.env` file is gitignored. You will never commit it. For Make.com, you will 
 5. **Build Scenario 3** (Vapi Outcome): follow `make/scenario_guide.md` → Scenario 3
    - After creating the Scenario 3 webhook, copy its URL
    - Paste into Vapi: Settings → Server URL
+6. **Build Scenario 4** (SMS Retry): follow `make/scenario_guide.md` → Scenario 4
 
 ---
 

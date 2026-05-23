@@ -10,7 +10,6 @@ Replace `{{ }}` placeholders with data from Google Sheets and the patient's SMS 
 - Rx #: {{rx_number}}
 - Refill due: {{refill_date}}
 - Doctor: {{doctor_name}} — {{doctor_phone}}
-- Pharmacy: {{pharmacy_phone}}
 
 **Patient's reply:**
 "{{patient_sms_reply}}"
@@ -27,7 +26,6 @@ Prescription details:
 - Rx #: {{1.rx_number}}
 - Refill due: {{1.refill_date}}
 - Doctor: {{1.doctor_name}} — {{1.doctor_phone}}
-- Pharmacy: {{1.pharmacy_phone}}
 
 Patient's reply:
 "{{3.Body}}"

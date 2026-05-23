@@ -1,3 +1,3 @@
-Drug Name,Rx #,Refill Date,Days Notice,Doctor Name,Doctor Phone,Pharmacy Phone,Last Notified,Notes
-Lisinopril 10mg,RX-1234,2026-06-01,5,Dr. Smith,312-555-0100,312-555-0200,,
-Metformin 500mg,RX-5678,2026-06-10,7,Dr. Jones,312-555-0101,312-555-0200,,
+Drug Name,Rx #,Refill Date,Days Notice,Doctor Name,Doctor Phone,Supply Days,Last Notified,Notify Attempt,Reply Received,Notes
+Lisinopril 10mg,RX-1234,2026-06-01,5,Dr. Smith,312-555-0100,30,,,,
+Metformin 500mg,RX-5678,2026-06-10,7,Dr. Jones,312-555-0101,90,,,,

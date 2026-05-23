@@ -8,8 +8,8 @@
       "properties": {
         "action": {
           "type": "string",
-          "enum": ["DOCTOR", "PHARMACY", "BOTH", "SKIP"],
-          "description": "Who to contact: DOCTOR (call doctor only), PHARMACY (call pharmacy only), BOTH (call both), SKIP (no action needed)"
+          "enum": ["DOCTOR", "SKIP"],
+          "description": "Who to contact: DOCTOR (call doctor's office), SKIP (no action needed)"
         },
         "confidence": {
           "type": "string",
@@ -22,15 +22,11 @@
         },
         "doctor_call_notes": {
           "type": "string",
-          "description": "Brief context for the doctor call (e.g. 'Patient says prescription expired' or 'Doctor hasn't sent new script yet'). Include only when action is DOCTOR or BOTH."
-        },
-        "pharmacy_call_notes": {
-          "type": "string",
-          "description": "Brief context for the pharmacy call (e.g. 'Standard refill request, Rx on file'). Include only when action is PHARMACY or BOTH."
+          "description": "Brief context for the doctor call (e.g. 'Patient says prescription expired' or 'Doctor hasn't sent new script yet'). Include only when action is DOCTOR."
         },
         "outcome_sms_template": {
           "type": "string",
-          "description": "Template for the outcome SMS to send after calls complete. Use {{CALL_RESULT}} as a placeholder for the actual call outcome. E.g. 'Done! {{CALL_RESULT}} They usually process these within 1–2 business days.'"
+          "description": "Template for the outcome SMS to send after the call completes. Use {{CALL_RESULT}} as a placeholder for the actual call outcome. E.g. 'Done! {{CALL_RESULT}} They usually process these within 1–2 business days.'"
         }
       }
     }

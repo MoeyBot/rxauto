@@ -3,6 +3,7 @@
   "_docs": "https://docs.vapi.ai/api-reference/calls/create-phone-call",
 
   "assistantId": "{{VAPI_DOCTOR_ASSISTANT_ID}}",
+  "_note": "This payload is for doctor calls only. Pharmacy calls are not yet implemented.",
 
   "assistant": {
     "firstMessage": "Hello, I'm calling on behalf of {{PATIENT_NAME}} regarding a prescription refill. Am I speaking with someone who can help?",
@@ -23,6 +24,12 @@
     "name": "{{DOCTOR_OR_PHARMACY_NAME}}"
   },
 
+  "metadata": {
+    "row_number": "{{SHEET_ROW_NUMBER}}",
+    "drug_name": "{{DRUG_NAME}}",
+    "supply_days": "{{SUPPLY_DAYS}}"
+  },
+
   "_make_module_notes": [
     "In Make.com HTTP module:",
     "  URL: https://api.vapi.ai/call/phone",
@@ -37,8 +44,10 @@
     "  {{RX_NUMBER}}                → Google Sheets column B",
     "  {{CALL_REASON}}              → from Claude tool output: doctor_call_notes or pharmacy_call_notes",
     "  {{CALLBACK_NUMBER}}          → YOUR_PHONE_NUMBER from Make.com variables",
-    "  {{DOCTOR_OR_PHARMACY_PHONE}} → Google Sheets column F (doctor) or G (pharmacy)",
+    "  {{DOCTOR_OR_PHARMACY_PHONE}} → Google Sheets column F (doctor phone)",
     "  {{VAPI_DOCTOR_ASSISTANT_ID}} → stored as Make.com variable",
-    "  {{VAPI_PHONE_NUMBER_ID}}     → found in Vapi dashboard under Phone Numbers"
+    "  {{VAPI_PHONE_NUMBER_ID}}     → found in Vapi dashboard under Phone Numbers",
+    "  {{SHEET_ROW_NUMBER}}         → row number from Google Sheets iterator (used by Scenario 3 to update Refill Date)",
+    "  {{SUPPLY_DAYS}}              → Google Sheets Supply Days column (30 or 90)"
   ]
 }

@@ -18,7 +18,6 @@ Never hardcode keys in module fields — always reference variables.
 | `YOUR_PHONE_NUMBER`       | Your personal number (+1XXXXXXXXXX)   |
 | `VAPI_API_KEY`            | Vapi dashboard                        |
 | `VAPI_DOCTOR_ASSISTANT_ID`| Vapi dashboard → Assistants           |
-| `VAPI_PHARMACY_ASSISTANT_ID`| Vapi dashboard → Assistants         |
 | `VAPI_PHONE_NUMBER_ID`    | Vapi dashboard → Phone Numbers        |
 | `GOOGLE_SPREADSHEET_ID`   | From Google Sheets URL                |
 | `PATIENT_NAME`            | Your full name                        |
@@ -63,10 +62,16 @@ Never hardcode keys in module fields — always reference variables.
   Hi! Your {{4.Drug Name}} refill is due in {{dateDifference(parseDate(4.Refill Date; "YYYY-MM-DD"); now; "days")}} days (Rx {{4.Rx #}}). Do you need a reorder? Reply YES, NO, or tell me what's going on.
   ```
 
-**Module 6 — Log Sent (Optional)**
+**Module 6 — Log Sent**
 - Type: `Google Sheets → Update a Row`
-- Update a "Last Notified" column in your sheet to track when you sent the alert
-- Useful to prevent duplicate alerts if the scenario runs multiple times
+- Spreadsheet ID: `{{GOOGLE_SPREADSHEET_ID}}`
+- Sheet Name: `Sheet1`
+- Row Number: `{{3.rowNumber}}` (the row number returned by the Iterator)
+- Fields to update:
+  - `Last Notified` → `{{formatDate(now; "YYYY-MM-DD HH:mm:ss")}}`
+  - `Notify Attempt` → `1`
+  - `Reply Received` → *(leave blank / clear the field)*
+- This prevents duplicate alerts and seeds the retry counter for Scenario 4
 
 ---
 
@@ -87,6 +92,14 @@ Never hardcode keys in module fields — always reference variables.
 - Type: `Webhooks → Custom Webhook`
 - This receives the Twilio SMS payload
 - Key fields: `Body` (the patient's reply), `From` (patient's number)
+
+**Module 1b — Mark Reply Received**
+- Type: `Google Sheets → Search Rows`
+- Find the row where `Last Notified` is not blank and `Reply Received` is blank (the active pending refill)
+- Then immediately follow with `Google Sheets → Update a Row` on that row:
+  - `Reply Received` → `{{formatDate(now; "YYYY-MM-DD HH:mm:ss")}}`
+  - `Notify Attempt` → `0` (stops Scenario 4 from sending further retries)
+- Do this **before** calling Claude so retries are halted even if Claude or Vapi fail
 
 **Module 2 — Get Prescription Context**
 - Type: `Google Sheets → Search Rows`
@@ -115,7 +128,7 @@ Never hardcode keys in module fields — always reference variables.
     "messages": [
       {
         "role": "user",
-        "content": "Prescription details:\n- Drug: {{2.Drug Name}}\n- Rx #: {{2.Rx #}}\n- Refill due: {{2.Refill Date}}\n- Doctor: {{2.Doctor Name}} — {{2.Doctor Phone}}\n- Pharmacy: {{2.Pharmacy Phone}}\n\nPatient's reply:\n\"{{1.Body}}\""
+        "content": "Prescription details:\n- Drug: {{2.Drug Name}}\n- Rx #: {{2.Rx #}}\n- Refill due: {{2.Refill Date}}\n- Doctor: {{2.Doctor Name}} — {{2.Doctor Phone}}\n\nPatient's reply:\n\"{{1.Body}}\""
       }
     ]
   }
@@ -125,7 +138,7 @@ Never hardcode keys in module fields — always reference variables.
 - Type: `JSON → Parse JSON`
 - JSON string: `{{3.content[]}}`
 - You need to extract `content[1].input` where `content[1].type == "tool_use"`
-- Parse the `action`, `confirmation_sms`, `doctor_call_notes`, `pharmacy_call_notes`, `outcome_sms_template` fields
+- Parse the `action`, `confirmation_sms`, `doctor_call_notes`, `outcome_sms_template` fields
 
 **Module 5 — Send Confirmation SMS**
 - Type: `Twilio → Send an SMS`
@@ -135,22 +148,16 @@ Never hardcode keys in module fields — always reference variables.
 
 **Module 6 — Router**
 - Type: `Flow Control → Router`
-- Route 1: `action == "DOCTOR"` → go to Module 7a
-- Route 2: `action == "PHARMACY"` → go to Module 7b
-- Route 3: `action == "BOTH"` → go to both 7a and 7b (use Repeater or two parallel paths)
-- Route 4: `action == "SKIP"` → end (no calls needed)
+- Route 1: `action == "DOCTOR"` → go to Module 7
+- Route 2: `action == "SKIP"` → end (no call needed)
 
-**Module 7a — Trigger Doctor Call**
+**Module 7 — Trigger Doctor Call**
 - Type: `HTTP → Make a Request`
 - URL: `https://api.vapi.ai/call/phone`
 - Method: POST
 - Headers: `Authorization: Bearer {{VAPI_API_KEY}}`
 - Body: See `vapi/trigger_call_payload.json` — use doctor assistant ID, doctor phone from Google Sheets
 - Set `CALL_REASON` to `{{4.doctor_call_notes}}`
-
-**Module 7b — Trigger Pharmacy Call**
-- Same as 7a but use `VAPI_PHARMACY_ASSISTANT_ID` and pharmacy phone number
-- Set `CALL_REASON` to `{{4.pharmacy_call_notes}}`
 
 ---
 
@@ -179,6 +186,10 @@ Never hardcode keys in module fields — always reference variables.
   - `voicemail` → left voicemail
   - `customer-did-not-answer` → no answer
   - `max-duration-exceeded` → timed out (hung up)
+- Also extract from `message.call.metadata`:
+  - `row_number` → the Google Sheets row to update
+  - `supply_days` → the refill cycle length (e.g. 30 or 90)
+  - `drug_name` → used in the outcome SMS
 
 **Module 3 — Send Outcome SMS**
 - Type: `Twilio → Send an SMS`
@@ -186,14 +197,76 @@ Never hardcode keys in module fields — always reference variables.
 - To: `{{YOUR_PHONE_NUMBER}}`
 - Body: Build a message from the outcome. Example:
   ```
-  Update on your {{DRUG_NAME}} refill: {{OUTCOME_TEXT}} 
+  Update on your {{2.drug_name}} refill: {{OUTCOME_TEXT}}
   Transcript summary: {{truncate(1.message.transcript; 200)}}
   ```
 
-**Module 4 — Update Sheet (Optional)**
+**Module 4 — Update Refill Date (on success only)**
+- Type: `Flow Control → Filter` → only continue if outcome is `success`
+- Then: `Google Sheets → Update a Row`
+  - Spreadsheet ID: `{{GOOGLE_SPREADSHEET_ID}}`
+  - Sheet Name: `Sheet1`
+  - Row Number: `{{2.row_number}}` (from call metadata)
+  - Fields to update:
+    - `Refill Date` → `{{formatDate(addDays(now; toNumber(2.supply_days)); "YYYY-MM-DD")}}`
+  - This advances the refill date by the prescription's supply length, preventing re-alerts until the next cycle
+- **Do not** update the Refill Date for voicemail/no-answer outcomes — the system should continue alerting until confirmed
+
+---
+
+## Scenario 4: SMS Retry (No Reply)
+
+**Trigger:** Schedule — runs every 3 hours
+
+If the patient has not replied to an SMS alert, this scenario retries up to 4 total attempts (the original send from Scenario 1, plus 3 retries), spaced 3 hours apart.
+
+### Modules
+
+**Module 1 — Schedule**
+- Type: `Schedule`
+- Interval: Every 3 hours (e.g. 09:00, 12:00, 15:00, 18:00)
+- Align start times with Scenario 1's 9am run so the first retry window is 12:00
+
+**Module 2 — Get All Prescriptions**
+- Type: `Google Sheets → Get Spreadsheet Rows`
+- Spreadsheet ID: `{{GOOGLE_SPREADSHEET_ID}}`
+- Sheet Name: `Sheet1`
+- Table contains headers: Yes
+
+**Module 3 — Iterate Rows**
+- Type: `Flow Control → Iterator`
+- Array: `{{2.rows}}`
+
+**Module 4 — Filter: Retry Needed?**
+- Type: `Flow Control → Filter`
+- Label: `Needs retry?`
+- All of the following conditions must be true:
+  1. `Notify Attempt` ≥ `1` AND `Notify Attempt` ≤ `3`
+     *(at least one SMS was sent and we have retries remaining)*
+  2. `Reply Received` is empty
+     *(patient has not replied)*
+  3. `{{formatDate(addSeconds(parseDate(3.Last Notified; "YYYY-MM-DD HH:mm:ss"); 10800); "YYYY-MM-DD HH:mm:ss")}}` ≤ `{{formatDate(now; "YYYY-MM-DD HH:mm:ss")}}`
+     *(at least 3 hours have passed since last notification — 10800 seconds = 3 hours)*
+
+**Module 5 — Send Retry SMS**
+- Type: `Twilio → Send an SMS`
+- From: `{{TWILIO_PHONE_NUMBER}}`
+- To: `{{YOUR_PHONE_NUMBER}}`
+- Body (vary message by attempt number for clarity):
+  ```
+  Reminder: Your {{3.Drug Name}} refill is due in {{dateDifference(parseDate(3.Refill Date; "YYYY-MM-DD"); now; "days")}} days (Rx {{3.Rx #}}). Reply YES, NO, or tell me what's going on. (Attempt {{add(3.Notify Attempt; 1)}} of 4)
+  ```
+
+**Module 6 — Increment Attempt Counter**
 - Type: `Google Sheets → Update a Row`
-- Update the "Refill Date" column to +30 or +90 days when a call succeeds
-- Prevents the system from re-alerting immediately after a successful reorder
+- Spreadsheet ID: `{{GOOGLE_SPREADSHEET_ID}}`
+- Sheet Name: `Sheet1`
+- Row Number: `{{3.rowNumber}}`
+- Fields to update:
+  - `Last Notified` → `{{formatDate(now; "YYYY-MM-DD HH:mm:ss")}}`
+  - `Notify Attempt` → `{{add(3.Notify Attempt; 1)}}`
+
+> **How the 4-attempt cap works:** Scenario 1 sends attempt 1 and writes `Notify Attempt = 1`. Scenario 4 fires when `Notify Attempt` is 1, 2, or 3 (max 3 retries). After incrementing to 4, the filter condition `Notify Attempt ≤ 3` fails and retries stop automatically. The patient receives 4 total SMS messages, each 3 hours apart.
 
 ---
 
@@ -202,4 +275,4 @@ Never hardcode keys in module fields — always reference variables.
 - **Test mode:** In Make.com, use "Run once" to test each scenario manually before activating the schedule
 - **Error handling:** Add error handlers to the Twilio and Vapi HTTP modules to catch failures
 - **Dedup protection:** Add a "Last Notified" date column to the sheet and filter it in Scenario 1 to avoid sending multiple alerts per day
-- **Business hours:** In Scenario 2, add a filter before Module 7a/7b to check that the current time is Mon–Fri, 9am–5pm. If not, store the pending action and trigger it at 9am the next business day using a scheduled scenario
+- **Business hours:** In Scenario 2, add a filter before Module 7 to check that the current time is Mon–Fri, 9am–5pm. If not, store the pending action and trigger it at 9am the next business day using a scheduled scenario

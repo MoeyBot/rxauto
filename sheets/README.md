@@ -21,8 +21,10 @@
 | Days Notice | How many days before Refill Date to get alerted | `5` |
 | Doctor Name | Your prescribing doctor's name | `Dr. Smith` |
 | Doctor Phone | Doctor's office direct line | `312-555-0100` |
-| Pharmacy Phone | Pharmacy's phone number | `312-555-0200` |
-| Last Notified | Auto-updated by Make.com (don't edit) | `YYYY-MM-DD` |
+| Supply Days | Days in the dispensed supply — used to auto-advance Refill Date after a reorder | `30` or `90` |
+| Last Notified | Auto-updated by Make.com with the datetime of the most recent SMS alert (don't edit) | `YYYY-MM-DD HH:mm:ss` |
+| Notify Attempt | Auto-updated by Make.com — counts SMS attempts (1–4); reset to 0 when reply received (don't edit) | `1` |
+| Reply Received | Auto-updated by Make.com with the datetime the patient replied (don't edit) | `YYYY-MM-DD HH:mm:ss` |
 | Notes | Any freeform notes for yourself | Optional |
 
 ## Access for Make.com
@@ -42,9 +44,10 @@
 
 ## Keeping Refill Dates Current
 
-After a successful reorder, update the "Refill Date" column to the next expected refill date.  
-Make.com Scenario 3 can do this automatically if you set up the optional Sheet update module.
+Make.com Scenario 3 automatically updates the "Refill Date" column after a successful call, using the row's `Supply Days` value to compute the next refill date. No manual update needed after a reorder.
 
 A typical refill cycle:
-- 30-day supply → add 30 days
-- 90-day supply → add 90 days
+- 30-day supply → `Supply Days = 30`
+- 90-day supply → `Supply Days = 90`
+
+If a call outcome is unclear (voicemail, no answer), the Refill Date is left unchanged so the system keeps alerting.

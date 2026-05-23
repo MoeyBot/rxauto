@@ -16,7 +16,6 @@ rxauto/
 │   └── user_message_template.md  # How to build the user message in Make.com
 ├── vapi/
 │   ├── doctor_agent.json     # Vapi doctor call agent config
-│   ├── pharmacy_agent.json   # Vapi pharmacy call agent config
 │   └── trigger_call_payload.json  # Make.com HTTP body template for Vapi calls
 ├── make/
 │   └── scenario_guide.md     # Step-by-step Make.com scenario build guide
@@ -31,7 +30,7 @@ Claude receives the prescription details + your SMS reply and must call the `rou
 
 ```json
 {
-  "action": "DOCTOR | PHARMACY | BOTH | SKIP",
+  "action": "DOCTOR | SKIP",
   "confidence": "HIGH | MEDIUM | LOW",
   "confirmation_sms": "Got it — calling Dr. Smith now...",
   "doctor_call_notes": "Patient says prescription expired",
@@ -51,8 +50,8 @@ A no-code automation pipeline that:
 1. Reads your prescriptions from a Google Sheet daily
 2. Texts you via SMS when a refill date is approaching
 3. Lets you reply in plain English to decide what action to take
-4. Uses Claude AI to classify your reply (Doctor / Pharmacy / Both / Skip)
-5. Triggers Vapi.ai to make the outbound call(s) on your behalf
+4. Uses Claude AI to classify your reply (Doctor call / Skip)
+5. Triggers Vapi.ai to call the doctor's office on your behalf
 6. Texts you back with the outcome
 
 ---
@@ -66,11 +65,10 @@ A no-code automation pipeline that:
 
 💬 You reply freely (e.g. "my doctor hasn't sent the script yet")
   → 🤖 Claude API classifies intent
-    → Doctor / Pharmacy / Both / Skip
+    → Doctor call / Skip
 
-📞 Vapi calls doctor (if needed)
-  → 📞 Vapi calls pharmacy (if needed)
-    → 📱 SMS outcome summary sent to you
+📞 Vapi calls doctor's office
+  → 📱 SMS outcome summary sent to you
 ```
 
 ---
@@ -95,12 +93,12 @@ A no-code automation pipeline that:
 
 ## Google Sheet Structure
 
-| Drug Name | Rx # | Refill Date | Days Notice | Doctor Name | Doctor Phone | Pharmacy Phone |
-|---|---|---|---|---|---|---|
-| Lisinopril 10mg | RX-1234 | 2026-06-01 | 5 | Dr. Smith | 312-555-0100 | 312-555-0200 |
-| Metformin 500mg | RX-5678 | 2026-06-10 | 7 | Dr. Jones | 312-555-0101 | 312-555-0200 |
+| Drug Name | Rx # | Refill Date | Days Notice | Doctor Name | Doctor Phone | Supply Days | Last Notified | Notify Attempt | Reply Received | Notes |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Lisinopril 10mg | RX-1234 | 2026-06-01 | 5 | Dr. Smith | 312-555-0100 | 30 | | | | |
+| Metformin 500mg | RX-5678 | 2026-06-10 | 7 | Dr. Jones | 312-555-0101 | 90 | | | | |
 
-You edit this sheet directly. No app or database setup required.
+You edit the first 7 columns. `Last Notified`, `Notify Attempt`, and `Reply Received` are auto-managed by Make.com. No app or database setup required.
 
 ---
 
@@ -123,12 +121,12 @@ You edit this sheet directly. No app or database setup required.
 
 ### Claude API — Intent Classification
 - Make.com passes your SMS reply to Claude
-- Prompt: "Is this asking to call the doctor, pharmacy, both, or skip?"
-- Returns a clean routing decision (DOCTOR / PHARMACY / BOTH / SKIP)
+- Prompt: "Is this asking to call the doctor, or skip?"
+- Returns a clean routing decision (DOCTOR / SKIP)
 - **Cost:** <$0.01 per reply
 
 ### Vapi.ai — Outbound AI Voice Calls
-- AI voice agent calls doctor and/or pharmacy
+- AI voice agent calls the doctor's office
 - Navigates IVR menus, speaks naturally with staff
 - Leaves a voicemail if no answer
 - **Cost:** ~$0.05–$0.20 per call (~$0.10 for a 2-minute call)
@@ -152,11 +150,11 @@ You edit this sheet directly. No app or database setup required.
 
 ### Phase 3 — Day 5–6: Reply Handling
 - Add inbound SMS webhook in Make.com
-- Pass reply text to Claude API for DOCTOR / PHARMACY / BOTH / SKIP classification
+- Pass reply text to Claude API for DOCTOR / SKIP classification
 
 ### Phase 4 — Day 7–8: Outbound Calls
-- Configure Vapi.ai agent script for doctor and pharmacy conversations
-- Wire Make.com to trigger Vapi call based on Claude's classification
+- Configure Vapi.ai agent script for doctor conversations
+- Wire Make.com to trigger Vapi doctor call based on Claude's classification
 
 ### Phase 5 — Day 9–10: Outcome Loop & Testing
 - Add Vapi webhook → Make.com → outcome SMS to user
@@ -176,7 +174,7 @@ You edit this sheet directly. No app or database setup required.
 | Vapi.ai | ~$0.05–$0.20 per call |
 | **Total (typical)** | **~$3–5/month** |
 
-> **Worst case** (5 medications, all needing calls to both doctor and pharmacy in the same month): ~$8–10/month.
+> **Worst case** (5 medications, all needing doctor calls in the same month): ~$5–7/month.
 > 
 > **Note:** Vapi costs can increase if calls run long (e.g. placed on hold). Set a call timeout in Vapi to cap this.
 
@@ -187,16 +185,17 @@ You edit this sheet directly. No app or database setup required.
 - **IVR variance:** Every doctor's office has a different phone tree. Vapi needs robust prompting to navigate common menus. Test with your actual contacts first.
 - **Business hours:** Calls should only fire Mon–Fri, 9am–5pm local time. Add timezone-aware scheduling logic to avoid off-hours calls.
 - **Voicemail scripts:** Voicemail messages must include patient name, DOB, Rx number, and callback number so offices can action the refill without calling back.
-- **No-reply handling:** If you don't reply to the SMS check-in, build a retry after 2 hours before giving up.
+- **No-reply handling:** If you don't reply to the SMS check-in, the system retries every 3 hours for up to 4 total attempts before giving up. See Scenario 4 in `make/scenario_guide.md`.
 
 ---
 
-## Features 
+## Features
 
-- [ ] Retry SMS if no reply after x hours
-- [ ] Auto-update refill date in Sheet after successful reorder
+- [x] Retry SMS if no reply after 3 hours — up to 4 total attempts (Scenario 4)
+- [x] Auto-update refill date in Sheet after successful reorder (Scenario 3, Module 4)
 
 ## Enhancements for later
+- [ ] **Pharmacy notifications** — add a Vapi pharmacy agent, a `Pharmacy Phone` column to the Sheet, and PHARMACY / BOTH routing in Claude and Make.com to call the pharmacy directly for refills already on file
 - [ ] Batch multiple medications into one SMS check-in
 - [ ] Log call transcripts back to Google Sheet
 - [ ] Enforce business-hours call window per timezone

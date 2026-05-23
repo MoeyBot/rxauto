@@ -1,0 +1,38 @@
+[
+  {
+    "name": "route_prescription_request",
+    "description": "Route the patient's prescription refill request to the appropriate action. Always call this tool — never reply in plain text.",
+    "input_schema": {
+      "type": "object",
+      "required": ["action", "confirmation_sms"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["DOCTOR", "PHARMACY", "BOTH", "SKIP"],
+          "description": "Who to contact: DOCTOR (call doctor only), PHARMACY (call pharmacy only), BOTH (call both), SKIP (no action needed)"
+        },
+        "confidence": {
+          "type": "string",
+          "enum": ["HIGH", "MEDIUM", "LOW"],
+          "description": "How confident you are in the routing decision based on the patient's message"
+        },
+        "confirmation_sms": {
+          "type": "string",
+          "description": "Friendly 1–2 sentence SMS to send the patient confirming what action is being taken. If SKIP, explain you're skipping. If calling, say who you're calling."
+        },
+        "doctor_call_notes": {
+          "type": "string",
+          "description": "Brief context for the doctor call (e.g. 'Patient says prescription expired' or 'Doctor hasn't sent new script yet'). Include only when action is DOCTOR or BOTH."
+        },
+        "pharmacy_call_notes": {
+          "type": "string",
+          "description": "Brief context for the pharmacy call (e.g. 'Standard refill request, Rx on file'). Include only when action is PHARMACY or BOTH."
+        },
+        "outcome_sms_template": {
+          "type": "string",
+          "description": "Template for the outcome SMS to send after calls complete. Use {{CALL_RESULT}} as a placeholder for the actual call outcome. E.g. 'Done! {{CALL_RESULT}} They usually process these within 1–2 business days.'"
+        }
+      }
+    }
+  }
+]

@@ -1,0 +1,44 @@
+{
+  "_comment": "Template for the Vapi POST /call/phone API body. Use this in Make.com's HTTP module when triggering a call.",
+  "_docs": "https://docs.vapi.ai/api-reference/calls/create-phone-call",
+
+  "assistantId": "{{VAPI_DOCTOR_ASSISTANT_ID}}",
+
+  "assistant": {
+    "firstMessage": "Hello, I'm calling on behalf of {{PATIENT_NAME}} regarding a prescription refill. Am I speaking with someone who can help?",
+    "model": {
+      "messages": [
+        {
+          "role": "system",
+          "content": "Patient name: {{PATIENT_NAME}}\nDate of birth: {{PATIENT_DOB}}\nDrug: {{DRUG_NAME}}\nRx number: {{RX_NUMBER}}\nCall reason: {{CALL_REASON}}\nCallback number: {{CALLBACK_NUMBER}}\n\nUse these details throughout the call."
+        }
+      ]
+    }
+  },
+
+  "phoneNumberId": "{{VAPI_PHONE_NUMBER_ID}}",
+
+  "customer": {
+    "number": "{{DOCTOR_OR_PHARMACY_PHONE}}",
+    "name": "{{DOCTOR_OR_PHARMACY_NAME}}"
+  },
+
+  "_make_module_notes": [
+    "In Make.com HTTP module:",
+    "  URL: https://api.vapi.ai/call/phone",
+    "  Method: POST",
+    "  Headers: Authorization: Bearer {{VAPI_API_KEY}}",
+    "  Body: JSON — fill in the template values from Google Sheets data and Claude's route decision",
+    "",
+    "Replace {{...}} with Make.com variable mappings:",
+    "  {{PATIENT_NAME}}             → from your config / Google Sheet",
+    "  {{PATIENT_DOB}}              → from your config",
+    "  {{DRUG_NAME}}                → Google Sheets column A",
+    "  {{RX_NUMBER}}                → Google Sheets column B",
+    "  {{CALL_REASON}}              → from Claude tool output: doctor_call_notes or pharmacy_call_notes",
+    "  {{CALLBACK_NUMBER}}          → YOUR_PHONE_NUMBER from Make.com variables",
+    "  {{DOCTOR_OR_PHARMACY_PHONE}} → Google Sheets column F (doctor) or G (pharmacy)",
+    "  {{VAPI_DOCTOR_ASSISTANT_ID}} → stored as Make.com variable",
+    "  {{VAPI_PHONE_NUMBER_ID}}     → found in Vapi dashboard under Phone Numbers"
+  ]
+}

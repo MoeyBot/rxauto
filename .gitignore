@@ -1,0 +1,61 @@
+# ── Environment & secrets ──────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Google credentials ─────────────────────────────────────
+credentials.json
+*credentials*.json
+service-account.json
+*service-account*.json
+*-sa.json
+token.json
+gcp-key.json
+google-*.json
+
+# ── API keys / config files (catch-all patterns) ───────────
+*.key
+*.pem
+*.p12
+*.pfx
+*.secret
+*secret*.json
+*secret*.yaml
+*secret*.yml
+secrets/
+config/secrets*
+
+# ── Common secret filenames ────────────────────────────────
+auth.json
+key.json
+private.json
+keyfile.json
+credentials.json
+.secrets
+
+# ── Images / large binaries ────────────────────────────────
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.mp4
+*.mov
+*.zip
+*.tar.gz
+
+# ── OS ─────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Editors ────────────────────────────────────────────────
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Logs ───────────────────────────────────────────────────
+*.log
+logs/
